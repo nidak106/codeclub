@@ -4,7 +4,7 @@ import DashboardLayout from './components/DashboardLayout';
 import DashboardOverview from './pages/DashboardOverview';
 import ApplianceInsights from './pages/ApplianceInsights';
 import BillingPrediction from './pages/BillingPrediction';
-import NetMeteringSummary from './pages/NetMeteringSummary';
+// import NetMeteringSummary from './pages/NetMeteringSummary';
 
 function App() {
   return (
@@ -15,7 +15,7 @@ function App() {
           <Route index element={<DashboardOverview />} />
           <Route path="appliances" element={<ApplianceInsights />} />
           <Route path="billing" element={<BillingPrediction />} />
-          <Route path="net-metering" element={<NetMeteringSummary />} />
+          {/* <Route path="net-metering" element={<NetMeteringSummary />} /> */}
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

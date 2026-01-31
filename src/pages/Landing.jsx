@@ -47,7 +47,7 @@ const Landing = () => {
      {/* Feature Cards */}
 <div className="grid md:grid-cols-3 gap-6 mb-12 mt-10 text-left">
   
-  {/* 1️⃣ Net Metering */}
+  {/* 1️⃣ Net Metering
   <div className="p-1 bg-gradient-to-r from-blue-500 via-teal-400 to-green-500 bg-[length:200%_200%] animate-gradient-x rounded-2xl">
     <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
       <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
@@ -71,7 +71,7 @@ const Landing = () => {
         and calculate bill adjustments based on net energy flow.
       </p>
     </div>
-  </div>
+  </div> */}
 
   {/* 2️⃣ Energy Optimization */}
   <div className="p-1 bg-gradient-to-r from-blue-500 via-teal-400 to-green-500 bg-[length:200%_200%] animate-gradient-x

@@ -10,7 +10,7 @@ const DashboardLayout = () => {
     { name: 'Overview', path: '/dashboard', icon: '📊' },
     { name: 'Appliance Insights', path: '/dashboard/appliances', icon: '🔌' },
     { name: 'Billing Prediction', path: '/dashboard/billing', icon: '💰' },
-    { name: 'Net Metering', path: '/dashboard/net-metering', icon: '⚡' }
+    // { name: 'Net Metering', path: '/dashboard/net-metering', icon: '⚡' }
   ];
 
   const isActive = (path) => {

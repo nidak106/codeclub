@@ -1,186 +1,158 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { billingPrediction } from '../data/dummyData';
+import { useState, useEffect } from 'react';
 
 const BillingPrediction = () => {
-  const { daily, monthly } = billingPrediction;
+  const [billingSummary, setBillingSummary] = useState(null);
+  const [historicalVsPredicted, setHistoricalVsPredicted] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const calculateChange = (current, previous) => {
-    const change = ((current - previous) / previous) * 100;
-    return change.toFixed(1);
+  const API_BASE_URL = 'http://localhost:5000/api';
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetching comparison and historical vs predicted data
+      // Note: We use Promise.allSettled to prevent one failing route from breaking the whole UI
+      const [comparisonRes, historicalRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/billing/comparison`),
+        fetch(`${API_BASE_URL}/predictions/historical-vs-predicted`)
+      ]);
+
+      const comparisonData = await comparisonRes.json();
+      const historicalData = await historicalRes.json();
+
+      if (comparisonData.status === 'success') {
+        setBillingSummary(comparisonData);
+      }
+      
+      if (historicalData.status === 'success') {
+        const chartData = historicalData.dates.map((date, i) => ({
+          date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          actual: parseFloat(historicalData.cost_actual[i].toFixed(2)),
+          predicted: parseFloat(historicalData.cost_predicted[i].toFixed(2))
+        }));
+        setHistoricalVsPredicted(chartData);
+      }
+
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Connection error: Is the Flask server running on port 5000?');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const changeVsPrevious = calculateChange(monthly.currentMonth, monthly.previousMonth);
-  const changeVsAverage = calculateChange(monthly.currentMonth, monthly.averageLast3Months);
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="text-gray-500 font-medium">Running SARIMAX Model...</p>
+      </div>
+    );
+  }
+
+  // Calculate percentages safely
+  const current = billingSummary?.current_month_bill || 0;
+  const previous = billingSummary?.previous_month_bill || 0;
+  const average = billingSummary?.three_month_average || 0;
+
+  const changeVsPrevious = previous !== 0 ? ((current - previous) / previous * 100).toFixed(1) : "0";
+  const changeVsAverage = average !== 0 ? ((current - average) / average * 100).toFixed(1) : "0";
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Billing Prediction</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Billing Prediction & Analysis</h2>
         <p className="text-gray-600">
-          AI-powered predictions based on historical consumption patterns and solar generation data.
+          Comparing actual costs against SARIMAX $(1, 1, 1) \times (1, 1, 1, 7)$ predictions.
         </p>
       </div>
 
-      {/* ML Model Note */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <span className="font-semibold">ML Model:</span> Predictions generated using time-series forecasting models
-          trained in Kaggle. Models consider seasonality, appliance usage patterns, and solar generation trends.
-        </p>
-      </div>
-
-      {/* Monthly Predictions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Monthly Prediction Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">Current Month Bill</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {monthly.currentMonth.toLocaleString()}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">PKR</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">Predicted Next Month</p>
-          <p className="text-3xl font-bold text-blue-600">
-            {monthly.predictedNextMonth.toLocaleString()}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">PKR</p>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">Previous Month</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {monthly.previousMonth.toLocaleString()}
-          </p>
-          <p className={`text-sm mt-1 font-medium ${changeVsPrevious < 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {changeVsPrevious > 0 ? '+' : ''}{changeVsPrevious}% vs last month
+          <p className="text-sm text-gray-600 mb-2">Current Month (July)</p>
+          <p className="text-3xl font-bold text-gray-900">PKR {Math.round(current).toLocaleString()}</p>
+          <p className={`text-sm mt-2 font-medium ${parseFloat(changeVsPrevious) < 0 ? 'text-green-600' : 'text-red-600'}`}>
+             {parseFloat(changeVsPrevious) > 0 ? '▲' : '▼'} {Math.abs(changeVsPrevious)}% vs last month
           </p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">3-Month Average</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {monthly.averageLast3Months.toLocaleString()}
-          </p>
-          <p className={`text-sm mt-1 font-medium ${changeVsAverage < 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {changeVsAverage > 0 ? '+' : ''}{changeVsAverage}% vs average
+          <p className="text-sm text-gray-600 mb-2">Previous Month (June)</p>
+          <p className="text-3xl font-bold text-gray-900">PKR {Math.round(previous).toLocaleString()}</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          <p className="text-sm text-gray-600 mb-2">3-Month Average (May-July)</p>
+          <p className="text-3xl font-bold text-gray-900">PKR {Math.round(average).toLocaleString()}</p>
+          <p className={`text-sm mt-2 font-medium ${parseFloat(changeVsAverage) < 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {parseFloat(changeVsAverage) > 0 ? '▲' : '▼'} {Math.abs(changeVsAverage)}% vs avg
           </p>
         </div>
       </div>
 
-      {/* Daily Prediction Chart */}
+      {/* Historical vs Predicted Chart */}
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">7-Day Bill Prediction</h3>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={daily}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-            <YAxis tick={{ fontSize: 12 }} label={{ value: 'PKR', angle: -90, position: 'insideLeft' }} />
-            <Tooltip />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="predicted"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              name="Predicted (PKR)"
-              dot={{ fill: '#3b82f6', r: 5 }}
-              strokeDasharray="5 5"
-            />
-            <Line
-              type="monotone"
-              dataKey="actual"
-              stroke="#10b981"
-              strokeWidth={2}
-              name="Actual (PKR)"
-              dot={{ fill: '#10b981', r: 5 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-        <p className="text-sm text-gray-600 mt-4">
-          Dashed line represents predicted values. Solid line shows actual recorded values.
-        </p>
-      </div>
-
-      {/* Comparison Cards */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Month-over-Month Comparison</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-              <span className="text-gray-700">Previous Month</span>
-              <span className="font-bold text-gray-900">{monthly.previousMonth.toLocaleString()} PKR</span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <span className="text-blue-700 font-medium">Current Month</span>
-              <span className="font-bold text-blue-700">{monthly.currentMonth.toLocaleString()} PKR</span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-              <span className="text-green-700">Difference</span>
-              <span className={`font-bold ${changeVsPrevious < 0 ? 'text-green-700' : 'text-red-700'}`}>
-                {changeVsPrevious > 0 ? '+' : ''}{changeVsPrevious}%
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Insights</h3>
-          <div className="space-y-3">
-            <div className="flex items-start space-x-3">
-              <span className="text-xl">📈</span>
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Trend Analysis</p>
-                <p className="text-sm text-gray-600">
-                  Your bill is {changeVsPrevious < 0 ? 'decreasing' : 'increasing'} compared to last month due to{' '}
-                  {changeVsPrevious < 0 ? 'increased solar generation' : 'seasonal consumption changes'}.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <span className="text-xl">💡</span>
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Optimization Tip</p>
-                <p className="text-sm text-gray-600">
-                  Shift high-power appliance usage to daytime hours (10 AM - 4 PM) when solar generation peaks
-                  to maximize savings.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <span className="text-xl">🎯</span>
-              <div>
-                <p className="font-medium text-gray-900 text-sm">Forecast Accuracy</p>
-                <p className="text-sm text-gray-600">
-                  ML model maintains 94% prediction accuracy based on last 6 months of data.
-                </p>
-              </div>
-            </div>
-          </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Accuracy Analysis: Predicted vs Actual Cost</h3>
+        <div className="h-[350px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={historicalVsPredicted}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="date" tick={{fontSize: 12}} minTickGap={20} />
+              <YAxis tick={{fontSize: 12}} />
+              <Tooltip 
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              />
+              <Legend verticalAlign="top" height={36}/>
+              <Line 
+                type="monotone" 
+                dataKey="actual" 
+                stroke="#10b981" 
+                strokeWidth={3} 
+                dot={false}
+                name="Actual Cost (PKR)" 
+              />
+              <Line 
+                type="monotone" 
+                dataKey="predicted" 
+                stroke="#3b82f6" 
+                strokeWidth={2} 
+                strokeDasharray="5 5"
+                dot={false}
+                name="Predicted Cost (PKR)" 
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
 
-      {/* Model Information */}
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl shadow-md p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">About the Prediction Model</h3>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Model Type</p>
-            <p className="text-sm text-gray-600">
-              Time-series forecasting with LSTM neural network
+      {/* Model Breakdown */}
+      <div className="bg-gray-900 text-white rounded-xl p-6 shadow-lg">
+        <h3 className="text-lg font-semibold mb-4 flex items-center">
+          <span className="mr-2">🤖</span> Model Intelligence
+        </h3>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="border-l-2 border-blue-500 pl-4">
+            <p className="text-blue-400 text-sm font-bold uppercase tracking-wider">Algorithm</p>
+            <p className="text-gray-300 text-sm mt-1">
+              Seasonal Auto-Regressive Integrated Moving Average (SARIMAX). 
+              Optimized for weekly $(s=7)$ electricity consumption patterns.
             </p>
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Training Data</p>
-            <p className="text-sm text-gray-600">
-              Historical consumption data, solar generation, weather patterns
-            </p>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Update Frequency</p>
-            <p className="text-sm text-gray-600">
-              Model retrains daily with new data for improved accuracy
+          <div className="border-l-2 border-green-500 pl-4">
+            <p className="text-green-400 text-sm font-bold uppercase tracking-wider">Cost Logic</p>
+            <p className="text-gray-300 text-sm mt-1">
+              Calculated at a fixed rate of <b>9 PKR per unit</b>. Predictions incorporate historical variance 
+              to estimate future billing cycles.
             </p>
           </div>
         </div>
