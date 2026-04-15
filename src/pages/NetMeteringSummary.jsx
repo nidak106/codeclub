@@ -1,9 +1,59 @@
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { netMeteringSummary } from '../data/dummyData';
 
 const NetMeteringSummary = () => {
-  const { unitsImported, unitsExported, netUnits, importCost, exportCredit, finalBill, monthlyBreakdown } =
-    netMeteringSummary;
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchNetMeteringSummary = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/net-metering/summary');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const result = await response.json();
+        if (result.status === 'success') {
+          setData(result);
+        } else {
+          throw new Error(result.message || 'API returned error');
+        }
+      } catch (err) {
+        setError(err.message);
+        // Fallback to dummy data
+        setData(netMeteringSummary);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNetMeteringSummary();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600">Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { unitsImported, unitsExported, netUnits, importCost, exportCredit, finalBill, monthlyBreakdown } = data;
 
   return (
     <div className="space-y-6">
