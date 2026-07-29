@@ -17,6 +17,7 @@ import {
 const BillingPrediction = () => {
   const [billingSummary, setBillingSummary] = useState(null);
   const [historicalVsPredicted, setHistoricalVsPredicted] = useState([]);
+  const [modelInfo, setModelInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -29,13 +30,17 @@ const BillingPrediction = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [comparisonRes, historicalRes] = await Promise.all([
+      const [comparisonRes, historicalRes, modelRes] = await Promise.all([
         fetch(`${API_BASE_URL}/billing/comparison`),
-        fetch(`${API_BASE_URL}/predictions/historical-vs-predicted`)
+        fetch(`${API_BASE_URL}/predictions/historical-vs-predicted`),
+        fetch(`${API_BASE_URL}/model-info`)
       ]);
 
       const comparisonData = await comparisonRes.json();
       const historicalData = await historicalRes.json();
+      const modelData = await modelRes.json();
+
+      if (modelData && modelData.status === 'success') setModelInfo(modelData);
 
       if (comparisonData.status === 'success') setBillingSummary(comparisonData);
       
@@ -61,7 +66,7 @@ const BillingPrediction = () => {
         <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
         <BrainCircuit className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-600 w-6 h-6 animate-pulse" />
       </div>
-      <p className="text-slate-500 font-bold tracking-widest text-xs uppercase animate-pulse">Computing SARIMAX Patterns...</p>
+      <p className="text-slate-500 font-bold tracking-widest text-xs uppercase animate-pulse">Computing xgboost Patterns...</p>
     </div>
   );
 
@@ -93,9 +98,16 @@ const BillingPrediction = () => {
             </div>
             <p className="text-slate-500 text-sm font-medium ml-10">Seasonal Auto-Regressive Intelligence</p>
           </div>
-          <div className="bg-white/60 backdrop-blur-md border border-white px-4 py-2 rounded-2xl shadow-sm flex items-center gap-3">
-            <Sparkles className="text-amber-500 w-4 h-4" />
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">Model: SARIMAX (1,1,1)x(1,1,1,7)</span>
+          <div className="bg-white/60 backdrop-blur-md border border-white px-4 py-2 rounded-2xl shadow-sm flex flex-col items-start gap-2">
+            <div className="flex items-center gap-3">
+              <Sparkles className="text-amber-500 w-4 h-4" />
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-tighter">
+                {modelInfo ? `Model: ${modelInfo.default_forecast_model.toUpperCase()}` : 'Model: Loading...'}
+              </span>
+            </div>
+            <div className="text-xs font-bold text-slate-500">
+              {modelInfo ? `Unit rate: ${modelInfo.cost_per_unit_avg} PKR/unit` : ''}
+            </div>
           </div>
         </div>
 

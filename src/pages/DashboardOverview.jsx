@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import { 
   Activity, AlertTriangle, TrendingDown, Zap, 
-  DollarSign, Calendar, CheckCircle2 
+  DollarSign, Calendar, CheckCircle2, UploadCloud, Loader2 
 } from 'lucide-react';
 
 const DashboardOverview = () => {
@@ -15,33 +15,86 @@ const DashboardOverview = () => {
     loading: true,
     error: null
   });
+  const [modelInfo, setModelInfo] = useState(null);
+  const [uploadMode, setUploadMode] = useState('consumption');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [uploadError, setUploadError] = useState('');
 
   const API_BASE_URL = 'http://localhost:5000/api';
 
+  const fetchDashboardData = async () => {
+    try {
+      const [statsRes, anomRes, modelRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/dashboard/stats`),
+        fetch(`${API_BASE_URL}/fault-detection/anomalies?threshold=2`),
+        fetch(`${API_BASE_URL}/model-info`)
+      ]);
+
+      const stats = await statsRes.json();
+      const anomalies = await anomRes.json();
+      const modelData = await modelRes.json();
+
+      if (modelData && modelData.status === 'success') setModelInfo(modelData);
+
+      setData({
+        summary: stats.status === 'success' ? stats : null,
+        anomalies: anomalies.status === 'success' ? anomalies.anomalies : [],
+        loading: false,
+        error: null
+      });
+    } catch (err) {
+      setData(prev => ({ ...prev, loading: false, error: "Failed to connect to Flask API" }));
+    }
+  };
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [statsRes, anomRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/dashboard/stats`),
-          fetch(`${API_BASE_URL}/fault-detection/anomalies?threshold=2`)
-        ]);
-
-        const stats = await statsRes.json();
-        const anomalies = await anomRes.json();
-
-        setData({
-          summary: stats.status === 'success' ? stats : null,
-          anomalies: anomalies.status === 'success' ? anomalies.anomalies : [],
-          loading: false,
-          error: null
-        });
-      } catch (err) {
-        setData(prev => ({ ...prev, loading: false, error: "Failed to connect to Flask API" }));
-      }
-    };
-
     fetchDashboardData();
   }, []);
+
+  const handleUpload = async (event) => {
+    event.preventDefault();
+
+    if (!selectedFile) {
+      setUploadError('Please choose a CSV file first.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError('');
+    setUploadMessage('');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    if (uploadMode === 'solar') {
+      formData.append('date_col', 'Date');
+      formData.append('value_col', 'Solar_Generation');
+    }
+
+    try {
+      const endpoint = uploadMode === 'consumption' ? '/upload/consumption' : '/upload/solar';
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        body: formData
+      });
+      const payload = await response.json();
+
+      if (!response.ok || payload.status !== 'success') {
+        throw new Error(payload.message || 'Upload failed');
+      }
+
+      setUploadMessage(`${uploadMode === 'consumption' ? 'Consumption' : 'Solar'} CSV uploaded successfully.`);
+      setSelectedFile(null);
+      event.target.reset();
+      await fetchDashboardData();
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   if (data.loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
@@ -79,13 +132,13 @@ const DashboardOverview = () => {
         {/* HEADER SECTION */}
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-slate-800">
-              Energy<span className="text-blue-600">Sync</span>
-            </h1>
-            <div className="flex items-center gap-2 text-slate-500 font-medium text-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
-              Real-time SARIMAX Backend Active
-            </div>
+              <h1 className="text-4xl font-black tracking-tight text-slate-800">
+                Energy<span className="text-blue-600">Sync</span>
+              </h1>
+              <div className="flex items-center gap-2 text-slate-500 font-medium text-sm">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+                {modelInfo ? `Real-time ${modelInfo.default_forecast_model.toUpperCase()} Backend Active` : 'Real-time Model Active'}
+              </div>
           </div>
           
           <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md p-1.5 pr-4 rounded-full border border-white shadow-sm">
@@ -95,6 +148,58 @@ const DashboardOverview = () => {
             <span className="text-sm font-bold text-slate-700">Database Synchronized</span>
           </div>
         </header>
+
+        {/* CSV UPLOAD PANEL */}
+        <div className="mb-10 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white shadow-lg shadow-slate-200/40 p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <UploadCloud className="w-5 h-5 text-blue-600" />
+                <h2 className="text-xl font-bold text-slate-800">Upload your own CSV data</h2>
+              </div>
+              <p className="text-sm text-slate-500">
+                Use this to add consumption or solar generation data without leaving the dashboard.
+              </p>
+            </div>
+            <form onSubmit={handleUpload} className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+              <select
+                value={uploadMode}
+                onChange={(e) => {
+                  setUploadMode(e.target.value);
+                  setUploadError('');
+                  setUploadMessage('');
+                }}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="consumption">Consumption CSV</option>
+                <option value="solar">Solar CSV</option>
+              </select>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => {
+                  setSelectedFile(e.target.files?.[0] || null);
+                  setUploadError('');
+                  setUploadMessage('');
+                }}
+                className="block w-full md:w-56 text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <button
+                type="submit"
+                disabled={uploading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                {uploading ? 'Uploading...' : 'Upload'}
+              </button>
+            </form>
+          </div>
+          <div className="mt-4 text-sm text-slate-500">
+            {uploadMode === 'consumption' ? 'Expected columns: Date, Total_Consumption' : 'Expected columns: Date, Solar_Generation'}
+          </div>
+          {uploadMessage ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{uploadMessage}</div> : null}
+          {uploadError ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{uploadError}</div> : null}
+        </div>
 
         {/* TOP STATS GRID */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
