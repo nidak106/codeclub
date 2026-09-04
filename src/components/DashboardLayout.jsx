@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
+import { useAuth } from '../context/useAuth';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dateRange, setDateRange] = useState('This Month');
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const navigation = [
     { name: 'Overview', path: '/dashboard', icon: '📊' },
@@ -89,13 +92,21 @@ const DashboardLayout = () => {
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-green-500 rounded-full flex items-center justify-center text-white font-semibold">
-                JD
+                {user?.email?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">Nida Khan</p>
-                <p className="text-xs text-gray-500 truncate">Demo User</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{user?.email}</p>
+                <p className="text-xs text-gray-500 truncate">Signed-in user</p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={logout}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-red-50 hover:text-red-700"
+            >
+              <LogOut size={16} />
+              Log out
+            </button>
           </div>
         </div>
       </aside>
