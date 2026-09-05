@@ -7,6 +7,7 @@ import {
   Activity, AlertTriangle, TrendingDown, Zap, 
   DollarSign, Calendar, CheckCircle2, UploadCloud, Loader2 
 } from 'lucide-react';
+import FaultAlertBanner from '../components/FaultAlertBanner';
 
 const DashboardOverview = () => {
   const [data, setData] = useState({
@@ -39,12 +40,12 @@ const DashboardOverview = () => {
       if (modelData && modelData.status === 'success') setModelInfo(modelData);
 
       setData({
-        summary: stats.status === 'success' ? stats : null,
-        anomalies: anomalies.status === 'success' ? anomalies.anomalies : [],
+        summary: stats.status === 'success' ? stats.data : null,
+        anomalies: stats.data?.anomalies || (anomalies.status === 'success' ? anomalies.data?.anomalies : []) || [],
         loading: false,
         error: null
       });
-    } catch (err) {
+    } catch {
       setData(prev => ({ ...prev, loading: false, error: "Failed to connect to Flask API" }));
     }
   };
@@ -88,6 +89,7 @@ const DashboardOverview = () => {
       setUploadMessage(`${uploadMode === 'consumption' ? 'Consumption' : 'Solar'} CSV uploaded successfully.`);
       setSelectedFile(null);
       event.target.reset();
+      window.dispatchEvent(new Event('energy-data-updated'));
       await fetchDashboardData();
     } catch (err) {
       setUploadError(err.message || 'Upload failed');
@@ -148,6 +150,8 @@ const DashboardOverview = () => {
             <span className="text-sm font-bold text-slate-700">Database Synchronized</span>
           </div>
         </header>
+
+        <FaultAlertBanner alerts={anomalies.filter((item) => item.severity === 'critical')} />
 
         {/* CSV UPLOAD PANEL */}
         <div className="mb-10 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white shadow-lg shadow-slate-200/40 p-6">

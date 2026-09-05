@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
+import HeaderAlertCenter from './HeaderAlertCenter';
+import NotificationSettings from './NotificationSettings';
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -99,6 +101,7 @@ const DashboardLayout = () => {
                 <p className="text-xs text-gray-500 truncate">Signed-in user</p>
               </div>
             </div>
+            <NotificationSettings />
             <button
               type="button"
               onClick={logout}
@@ -134,6 +137,7 @@ const DashboardLayout = () => {
 
             {/* Right Controls */}
             <div className="flex items-center space-x-4">
+              <HeaderAlertCenter />
               {/* Date Range */}
               <select
                 value={dateRange}

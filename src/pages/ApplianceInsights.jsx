@@ -13,11 +13,11 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import FaultAlertBanner from '../components/FaultAlertBanner';
 
 const ApplianceInsights = () => {
   const [anomalies, setAnomalies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [selectedAppliance, setSelectedAppliance] = useState('Fridge');
 
   const applianceList = [
@@ -37,12 +37,12 @@ const ApplianceInsights = () => {
         const response = await fetch(`${API_BASE_URL}/appliance-faults?appliance=${selectedAppliance}&threshold=2`);
         const data = await response.json();
         if (data.status === 'success') {
-          setAnomalies(data.anomalies);
+          setAnomalies(data.data?.anomalies || []);
         } else {
-          setError(data.message || "Failed to load data");
+          setAnomalies([]);
         }
-      } catch (err) {
-        setError("Backend Connection Offline");
+      } catch {
+        setAnomalies([]);
       } finally {
         setLoading(false);
       }
@@ -90,6 +90,8 @@ const ApplianceInsights = () => {
             <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Active Monitoring</span>
           </div>
         </header>
+
+        <FaultAlertBanner alerts={anomalies.filter((item) => item.severity === 'critical')} />
 
         {/* APPLIANCE SELECTOR (Segmented UI) */}
         <nav className="bg-white/60 backdrop-blur-md p-2 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 flex flex-wrap gap-2">
