@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   ShieldAlert, 
   Activity, 
@@ -13,12 +13,21 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
-import FaultAlertBanner from '../components/FaultAlertBanner';
 
 const ApplianceInsights = () => {
   const [anomalies, setAnomalies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppliance, setSelectedAppliance] = useState('Fridge');
+
+  const applianceChartData = anomalies
+    .slice()
+    .sort((left, right) => left.Date.localeCompare(right.Date))
+    .map((item) => ({
+      date: item.Date,
+      value: item.Total_Consumption,
+      severity: item.severity,
+      zscore: item.zscore,
+    }));
 
   const applianceList = [
     { id: 'Fridge', label: 'Fridge', icon: <Snowflake size={14}/> },
@@ -91,8 +100,6 @@ const ApplianceInsights = () => {
           </div>
         </header>
 
-        <FaultAlertBanner alerts={anomalies.filter((item) => item.severity === 'critical')} />
-
         {/* APPLIANCE SELECTOR (Segmented UI) */}
         <nav className="bg-white/60 backdrop-blur-md p-2 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 flex flex-wrap gap-2">
           {applianceList.map((app) => (
@@ -128,6 +135,31 @@ const ApplianceInsights = () => {
 
         {/* MAIN CONTENT GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {anomalies.length > 0 && (
+            <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white p-8 shadow-xl shadow-slate-200/50">
+              <div className="mb-6">
+                <h3 className="text-xl font-black text-slate-800">Anomaly Timeline</h3>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Highlighted appliance load spikes</p>
+              </div>
+              <div className="h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={applianceChartData}>
+                    <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#2563eb"
+                      strokeWidth={3}
+                      dot={(props) => <ApplianceAlertDot {...props} />}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
           {anomalies.length === 0 ? (
             <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-20 text-center border border-dashed border-slate-200">
               <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -188,6 +220,17 @@ const ApplianceInsights = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ApplianceAlertDot = ({ cx, cy, payload }) => {
+  if (cx == null || cy == null) return null;
+  const color = payload.severity === 'critical' ? '#dc2626' : '#f97316';
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={10} fill={color} opacity={0.18} className="animate-pulse" />
+      <circle cx={cx} cy={cy} r={5} fill={color} stroke="#fff" strokeWidth={2} />
+    </g>
   );
 };
 

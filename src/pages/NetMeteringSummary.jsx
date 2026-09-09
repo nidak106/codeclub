@@ -53,7 +53,25 @@ const NetMeteringSummary = () => {
     );
   }
 
-  const { unitsImported, unitsExported, netUnits, importCost, exportCredit, finalBill, monthlyBreakdown } = data;
+  const {
+    unitsImported,
+    unitsExported,
+    netUnits,
+    billedUnits,
+    creditedUnits,
+    energyCost,
+    fixedCharge,
+    gst,
+    exportCredit,
+    finalBill,
+    creditBalance,
+    billWithoutSolar,
+    savings,
+    monthlyBreakdown,
+  } = data;
+
+  const fmt = (n) => (n ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const savingsPercent = billWithoutSolar > 0 ? Math.round((savings / billWithoutSolar) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -61,60 +79,67 @@ const NetMeteringSummary = () => {
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Net Metering Summary</h2>
         <p className="text-gray-600">
-          Track your energy exchange with the grid and calculate bill adjustments based on solar export.
+          Track your energy exchange with the grid and see how solar is actually reducing your bill.
         </p>
       </div>
 
       {/* What is Net Metering */}
       <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl shadow-md p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">What is Net Metering?</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">How your bill is worked out</h3>
         <p className="text-gray-700 leading-relaxed">
-          Net metering is a billing mechanism that credits solar energy system owners for the electricity they add
-          to the grid. When your solar panels produce more electricity than you consume, the excess is exported to
-          the grid. You receive credits for this exported energy, which offset the cost of electricity you import
-          from the grid when your panels aren't producing enough power (e.g., at night).
+          Your solar panels feed power to the grid when they produce more than you're using, and you pull power
+          from the grid when they produce less. Each month, WAPDA nets these two flows against each other first —
+          <span className="font-medium"> imported units minus exported units</span> — and only charges you the
+          tariff-slab rate on whatever's left over. If you exported more than you imported that month, the extra
+          is paid back as a credit, at a lower buy-back rate than the tariff you'd normally pay for imports.
+          That's why the numbers below aren't a simple "import cost minus export credit" — the netting happens
+          <span className="font-medium"> before</span> the tariff slab is applied, not after.
         </p>
+      </div>
+
+      {/* With vs Without Solar */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-md p-6 border-2 border-gray-200">
+          <p className="text-sm text-gray-600 mb-1">Bill without solar</p>
+          <p className="text-3xl font-bold text-gray-500 line-through decoration-2">{fmt(billWithoutSolar)} PKR</p>
+          <p className="text-sm text-gray-500 mt-1">What you'd owe on your full usage with no panels at all</p>
+        </div>
+        <div className="bg-gradient-to-br from-blue-600 to-green-500 rounded-xl shadow-md p-6 text-white">
+          <p className="text-sm opacity-90 mb-1">Your actual bill with net metering</p>
+          <p className="text-3xl font-bold">{fmt(finalBill)} PKR</p>
+          <p className="text-sm opacity-90 mt-1">
+            You saved {fmt(savings)} PKR ({savingsPercent}% lower) over this period
+          </p>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-md p-6 border-2 border-red-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Units Imported</p>
+            <p className="text-sm text-gray-600">Imported from grid</p>
             <span className="text-2xl">⬇️</span>
           </div>
-          <p className="text-3xl font-bold text-red-600">{unitsImported}</p>
-          <p className="text-sm text-gray-500 mt-1">kWh from grid</p>
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <p className="text-sm text-gray-600">Cost</p>
-            <p className="text-xl font-bold text-gray-900">{importCost.toLocaleString()} PKR</p>
-          </div>
+          <p className="text-3xl font-bold text-red-600">{fmt(unitsImported)}</p>
+          <p className="text-sm text-gray-500 mt-1">kWh drawn from the grid</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 border-2 border-green-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Units Exported</p>
+            <p className="text-sm text-gray-600">Exported to grid</p>
             <span className="text-2xl">⬆️</span>
           </div>
-          <p className="text-3xl font-bold text-green-600">{unitsExported}</p>
-          <p className="text-sm text-gray-500 mt-1">kWh to grid</p>
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <p className="text-sm text-gray-600">Credit</p>
-            <p className="text-xl font-bold text-green-600">-{exportCredit.toLocaleString()} PKR</p>
-          </div>
+          <p className="text-3xl font-bold text-green-600">{fmt(unitsExported)}</p>
+          <p className="text-sm text-gray-500 mt-1">kWh sent back from solar</p>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-600 to-green-500 rounded-xl shadow-md p-6 text-white">
+        <div className="bg-white rounded-xl shadow-md p-6 border-2 border-blue-200">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm opacity-90">Net Units</p>
+            <p className="text-sm text-gray-600">Net units</p>
             <span className="text-2xl">🔄</span>
           </div>
-          <p className="text-3xl font-bold">{netUnits}</p>
-          <p className="text-sm opacity-90 mt-1">kWh (Import - Export)</p>
-          <div className="mt-3 pt-3 border-t border-white border-opacity-30">
-            <p className="text-sm opacity-90">Final Bill</p>
-            <p className="text-xl font-bold">{finalBill.toLocaleString()} PKR</p>
-          </div>
+          <p className="text-3xl font-bold text-blue-600">{fmt(netUnits)}</p>
+          <p className="text-sm text-gray-500 mt-1">imported − exported, netted first</p>
         </div>
       </div>
 
@@ -122,47 +147,51 @@ const NetMeteringSummary = () => {
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Bill Calculation Breakdown</h3>
         <div className="space-y-3">
-          <div className="flex justify-between items-center p-4 bg-red-50 rounded-lg">
+          <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
             <div>
-              <p className="text-sm text-gray-600">Energy Imported from Grid</p>
-              <p className="text-lg font-semibold text-gray-900">{unitsImported} kWh</p>
+              <p className="text-sm text-gray-600">Billed units (net import, after netting)</p>
+              <p className="text-lg font-semibold text-gray-900">{fmt(billedUnits)} kWh</p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600">Cost</p>
-              <p className="text-xl font-bold text-red-600">+{importCost.toLocaleString()} PKR</p>
+              <p className="text-sm text-gray-600">Energy cost</p>
+              <p className="text-xl font-bold text-gray-900">{fmt(energyCost)} PKR</p>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="text-sm text-gray-600">Fixed charges + GST (18%)</p>
+              <p className="text-lg font-semibold text-gray-900">Added on top of energy cost</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xl font-bold text-gray-900">+{fmt(fixedCharge + gst)} PKR</p>
             </div>
           </div>
 
           <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
             <div>
-              <p className="text-sm text-gray-600">Energy Exported to Grid</p>
-              <p className="text-lg font-semibold text-gray-900">{unitsExported} kWh</p>
+              <p className="text-sm text-gray-600">Credited units (months you exported more than you used)</p>
+              <p className="text-lg font-semibold text-gray-900">{fmt(creditedUnits)} kWh</p>
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-600">Credit</p>
-              <p className="text-xl font-bold text-green-600">-{exportCredit.toLocaleString()} PKR</p>
+              <p className="text-xl font-bold text-green-600">-{fmt(exportCredit)} PKR</p>
             </div>
           </div>
 
           <div className="flex justify-between items-center p-4 bg-gradient-to-r from-blue-100 to-green-100 rounded-lg border-2 border-blue-300">
             <div>
-              <p className="text-sm text-gray-600 font-medium">Net Amount Due</p>
-              <p className="text-lg font-semibold text-gray-900">{netUnits} kWh</p>
+              <p className="text-sm text-gray-600 font-medium">Final Bill</p>
+              {creditBalance > 0 && (
+                <p className="text-xs text-green-700 mt-0.5">
+                  plus {fmt(creditBalance)} PKR in unused credit carried forward
+                </p>
+              )}
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600 font-medium">Final Bill</p>
-              <p className="text-2xl font-bold text-blue-700">{finalBill.toLocaleString()} PKR</p>
+              <p className="text-2xl font-bold text-blue-700">{fmt(finalBill)} PKR</p>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800">
-            <span className="font-semibold">Savings:</span> You saved{' '}
-            <span className="font-bold">{exportCredit.toLocaleString()} PKR</span> this month by exporting solar
-            energy to the grid. Without net metering, your bill would have been{' '}
-            <span className="font-bold">{importCost.toLocaleString()} PKR</span>.
-          </p>
         </div>
       </div>
 
@@ -178,7 +207,7 @@ const NetMeteringSummary = () => {
             <Legend />
             <Bar dataKey="imported" fill="#ef4444" name="Imported (kWh)" radius={[8, 8, 0, 0]} />
             <Bar dataKey="exported" fill="#10b981" name="Exported (kWh)" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="net" fill="#3b82f6" name="Net (kWh)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="billedUnits" fill="#3b82f6" name="Billed net (kWh)" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -192,45 +221,29 @@ const NetMeteringSummary = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Month
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Imported (kWh)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exported (kWh)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Net (kWh)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Month</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imported</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exported</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billed net</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bill</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Without solar</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saved</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {monthlyBreakdown.map((month, index) => (
                 <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{month.month}</div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{month.month}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">{fmt(month.imported)} kWh</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">{fmt(month.exported)} kWh</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold">
+                    {month.billedUnits > 0 ? `${fmt(month.billedUnits)} kWh` : `${fmt(month.creditedUnits)} kWh credited`}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">{fmt(month.finalBill)} PKR</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fmt(month.billWithoutSolar)} PKR</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-red-600 font-medium">{month.imported} kWh</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-green-600 font-medium">{month.exported} kWh</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-blue-600 font-bold">{month.net} kWh</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        month.net < 150 ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                      }`}
-                    >
-                      {month.net < 150 ? 'Excellent' : 'Good'}
+                    <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      {fmt(month.savings)} PKR
                     </span>
                   </td>
                 </tr>
@@ -249,7 +262,7 @@ const NetMeteringSummary = () => {
             <div>
               <p className="font-medium text-gray-900 mb-1">Cost Savings</p>
               <p className="text-sm text-gray-600">
-                Reduce electricity bills by offsetting grid consumption with solar exports
+                Every unit you export offsets a unit you'd otherwise buy at the full tariff rate
               </p>
             </div>
           </div>

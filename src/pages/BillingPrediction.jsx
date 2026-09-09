@@ -17,9 +17,9 @@ import {
 const BillingPrediction = () => {
   const [billingSummary, setBillingSummary] = useState(null);
   const [historicalVsPredicted, setHistoricalVsPredicted] = useState([]);
+  const [anomalies, setAnomalies] = useState([]);
   const [modelInfo, setModelInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -30,15 +30,16 @@ const BillingPrediction = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [comparisonRes, historicalRes, modelRes] = await Promise.all([
+      const [comparisonRes, historicalRes, modelRes, anomalyRes] = await Promise.all([
         fetch(`${API_BASE_URL}/billing/comparison`),
         fetch(`${API_BASE_URL}/predictions/historical-vs-predicted`),
-        fetch(`${API_BASE_URL}/model-info`)
+        fetch(`${API_BASE_URL}/model-info`),
+        fetch(`${API_BASE_URL}/fault-detection/anomalies?threshold=2`)
       ]);
 
-      const comparisonData = await comparisonRes.json();
-      const historicalData = await historicalRes.json();
-      const modelData = await modelRes.json();
+      const [comparisonData, historicalData, modelData, anomalyData] = await Promise.all([
+        comparisonRes.json(), historicalRes.json(), modelRes.json(), anomalyRes.json()
+      ]);
 
       if (modelData && modelData.status === 'success') setModelInfo(modelData);
 
@@ -46,15 +47,16 @@ const BillingPrediction = () => {
       
       if (historicalData.status === 'success') {
         const chartData = historicalData.dates.map((date, i) => ({
+          isoDate: date.slice(0, 10),
           date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           actual: parseFloat(historicalData.cost_actual[i].toFixed(2)),
           predicted: parseFloat(historicalData.cost_predicted[i].toFixed(2))
         }));
         setHistoricalVsPredicted(chartData);
       }
-      setError(null);
-    } catch (err) {
-      setError('Backend Connection Offline');
+      setAnomalies(anomalyData.status === 'success' ? anomalyData.data?.anomalies || [] : []);
+    } catch {
+      setAnomalies([]);
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,6 @@ const BillingPrediction = () => {
   const average = billingSummary?.three_month_average || 0;
 
   const diff = current - previous;
-  const isUp = diff > 0;
 
   return (
     <div className="relative min-h-screen p-6 text-slate-900 overflow-hidden">
@@ -202,6 +203,15 @@ const BillingPrediction = () => {
                   fill="url(#colorPred)" 
                   name="AI Prediction"
                 />
+                <Line
+                  type="monotone"
+                  dataKey="actual"
+                  stroke="transparent"
+                  dot={(props) => <AlertDot {...props} anomalies={anomalies} />}
+                  activeDot={false}
+                  name="Anomaly alert"
+                  legendType="none"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -239,6 +249,19 @@ const BillingPrediction = () => {
 };
 
 // HELPER COMPONENT FOR METRICS
+const AlertDot = ({ cx, cy, payload, anomalies }) => {
+  const alert = anomalies.find((item) => item.Date === payload.isoDate);
+  if (!alert || cx == null || cy == null) return null;
+
+  const color = alert.severity === 'critical' ? '#dc2626' : '#f97316';
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={10} fill={color} opacity={0.18} className="animate-pulse" />
+      <circle cx={cx} cy={cy} r={5} fill={color} stroke="#fff" strokeWidth={2} />
+    </g>
+  );
+};
+
 const PredictionCard = ({ label, value, subLabel, trend, icon }) => {
   const isUp = trend > 0;
   const percentage = trend ? ((Math.abs(trend) / value) * 100).toFixed(1) : null;

@@ -7,7 +7,6 @@ import {
   Activity, AlertTriangle, TrendingDown, Zap, 
   DollarSign, Calendar, CheckCircle2, UploadCloud, Loader2 
 } from 'lucide-react';
-import FaultAlertBanner from '../components/FaultAlertBanner';
 
 const DashboardOverview = () => {
   const [data, setData] = useState({
@@ -150,8 +149,6 @@ const DashboardOverview = () => {
             <span className="text-sm font-bold text-slate-700">Database Synchronized</span>
           </div>
         </header>
-
-        <FaultAlertBanner alerts={anomalies.filter((item) => item.severity === 'critical')} />
 
         {/* CSV UPLOAD PANEL */}
         <div className="mb-10 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white shadow-lg shadow-slate-200/40 p-6">
