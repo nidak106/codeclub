@@ -7,6 +7,7 @@ import {
   Activity, AlertTriangle, TrendingDown, Zap, 
   DollarSign, Calendar, CheckCircle2, UploadCloud, Loader2 
 } from 'lucide-react';
+import { API_BASE_URL } from '../api';
 
 const DashboardOverview = () => {
   const [data, setData] = useState({
@@ -22,14 +23,12 @@ const DashboardOverview = () => {
   const [uploadMessage, setUploadMessage] = useState('');
   const [uploadError, setUploadError] = useState('');
 
-  const API_BASE_URL = 'http://localhost:5000/api';
-
   const fetchDashboardData = async () => {
     try {
       const [statsRes, anomRes, modelRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/dashboard/stats`),
-        fetch(`${API_BASE_URL}/fault-detection/anomalies?threshold=2`),
-        fetch(`${API_BASE_URL}/model-info`)
+        fetch(`${API_BASE_URL}/api/dashboard/stats`),
+        fetch(`${API_BASE_URL}/api/fault-detection/anomalies?threshold=2`),
+        fetch(`${API_BASE_URL}/api/model-info`)
       ]);
 
       const stats = await statsRes.json();
@@ -75,7 +74,7 @@ const DashboardOverview = () => {
 
     try {
       const endpoint = uploadMode === 'consumption' ? '/upload/consumption' : '/upload/solar';
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
         method: 'POST',
         body: formData
       });

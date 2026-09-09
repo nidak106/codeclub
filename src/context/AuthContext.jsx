@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AuthContext } from './authContextValue';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { API_BASE_URL } from '../api';
 
 async function requestAuth(path, options = {}, token = null) {
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

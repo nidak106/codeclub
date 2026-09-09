@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { API_BASE_URL } from '../api';
 
 const ApplianceInsights = () => {
   const [anomalies, setAnomalies] = useState([]);
@@ -37,13 +38,11 @@ const ApplianceInsights = () => {
     { id: 'Other Appliances', label: 'Others', icon: <PlusCircle size={14}/> }
   ];
 
-  const API_BASE_URL = 'http://localhost:5000/api';
-
   useEffect(() => {
     const fetchAnomalies = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/appliance-faults?appliance=${selectedAppliance}&threshold=2`);
+        const response = await fetch(`${API_BASE_URL}/api/appliance-faults?appliance=${selectedAppliance}&threshold=2`);
         const data = await response.json();
         if (data.status === 'success') {
           setAnomalies(data.data?.anomalies || []);

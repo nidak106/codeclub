@@ -13,6 +13,7 @@ import {
   Info,
   Sparkles
 } from 'lucide-react';
+import { API_BASE_URL } from '../api';
 
 const BillingPrediction = () => {
   const [billingSummary, setBillingSummary] = useState(null);
@@ -20,8 +21,6 @@ const BillingPrediction = () => {
   const [anomalies, setAnomalies] = useState([]);
   const [modelInfo, setModelInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const API_BASE_URL = 'http://localhost:5000/api';
 
   useEffect(() => {
     fetchAllData();
@@ -31,10 +30,10 @@ const BillingPrediction = () => {
     try {
       setLoading(true);
       const [comparisonRes, historicalRes, modelRes, anomalyRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/billing/comparison`),
-        fetch(`${API_BASE_URL}/predictions/historical-vs-predicted`),
-        fetch(`${API_BASE_URL}/model-info`),
-        fetch(`${API_BASE_URL}/fault-detection/anomalies?threshold=2`)
+        fetch(`${API_BASE_URL}/api/billing/comparison`),
+        fetch(`${API_BASE_URL}/api/predictions/historical-vs-predicted`),
+        fetch(`${API_BASE_URL}/api/model-info`),
+        fetch(`${API_BASE_URL}/api/fault-detection/anomalies?threshold=2`)
       ]);
 
       const [comparisonData, historicalData, modelData, anomalyData] = await Promise.all([

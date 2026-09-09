@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { netMeteringSummary } from '../data/dummyData';
+import { API_BASE_URL } from '../api';
 
 const NetMeteringSummary = () => {
   const [data, setData] = useState(null);
@@ -10,7 +11,7 @@ const NetMeteringSummary = () => {
   useEffect(() => {
     const fetchNetMeteringSummary = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/net-metering/summary');
+        const response = await fetch(`${API_BASE_URL}/api/net-metering/summary`);
         if (!response.ok) {
           throw new Error('Failed to fetch data');
         }
